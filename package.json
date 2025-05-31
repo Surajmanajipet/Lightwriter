@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "jspdf": "^3.0.1",
+    "quill": "^2.0.3"
+  }
+}

@@ -1,0 +1,199 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: #f3f3f3;
+  transition: background-color 0.5s;
+  overflow: hidden;
+  -webkit-user-drag: none;
+}
+
+#toolbar,
+#editor,
+#preview,
+body {
+  -webkit-app-region: no-drag;
+}
+
+#toolbar {
+  background: #f3f3f3;
+  border-bottom: 1px solid #ccc;
+  padding: 5px;
+  height: 5vh;
+  display: flex;
+  position: fixed;
+  top: 0;
+  z-index: 1;
+  width: 100vw;
+  justify-content: space-around;
+  align-items: center;
+}
+
+#toolbar select,
+#toolbar button {
+  margin: 0 5px;
+}
+
+#editor {
+  position: absolute;
+  top: 5vh;
+  height: 95vh;
+  width: 21cm;
+  margin: auto;
+  font-family: consolas;
+  font-size: 16px;
+  background-color: rgb(255, 255, 255);
+  overflow-y: auto;
+  border: none;
+  color: black;
+  transition: background-color 0.3s, color 0.3s;
+}
+#preview {
+  height: 95vh;
+  width: 100vw;
+  margin: auto;
+  position: absolute;
+  top: 5vh;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 16px;
+  border: none;
+  color: black;
+  display: none;
+  transition: background-color 0.3s, color 0.3s;
+  overflow: hidden;
+}
+.ql-snow .ql-picker.ql-font {
+  width: 136px important!;
+}
+
+.ql-snow .ql-picker:not(.ql-color-picker):not(.ql-icon-picker) svg {
+  position: absolute;
+  margin-top: -9px;
+  right: 0;
+  top: 50%;
+  left: 100%;
+  width: 18px;
+}
+
+.ql-snow.ql-toolbar .ql-picker-label.ql-active {
+  color: black;
+}
+
+.ql-snow.ql-toolbar .ql-picker-label.ql-active svg {
+  color: black;
+  background-color: transparent;
+  filter: invert(0%) sepia(100%) saturate(7500%) hue-rotate(307deg)
+    brightness(0%) contrast(112%);
+}
+
+body.dark-mode {
+  background-color: #171717;
+  color: #eee;
+}
+
+body.dark-mode #editor {
+  background-color: #353535;
+  color: #ffffff;
+  transition: background-color 0.3s;
+}
+body.dark-mode #name{
+  color: black;
+}
+body.dark-mode #autosave{
+  color: #000000;
+}
+body.dark-mode #sidebar{
+  background-color: #171717;
+}
+
+#themeToggle {
+  min-width: fit-content;
+}
+#modeToggle {
+  min-width: fit-content;
+}
+.window-controls {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  z-index: 1000;
+}
+
+.window-controls button {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.window-controls button:hover {
+  background: #ddd;
+}
+#container {
+  display: flex;
+  height: 100vh;
+}
+aside#sidebar {
+  position: relative;
+  top: 5vh;
+  width: 23vw;
+  padding: 10px;
+  overflow-y: auto;
+  background: #f7f7f7;
+}
+#sceneList {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  font-family: consolas;
+  border: none;
+}
+#sceneList li {
+  padding: 5px 0;
+  cursor: pointer;
+  border: 1px solid black;
+  margin: 5px 0;
+  cursor: move;
+  background-color: white;
+  transition: margin 0.2s;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+body.dark-mode #sceneList li{
+  color: rgb(0, 0, 0);
+  background-color: #ffffff;
+}
+body.dark-mode #sceneList li:hover{
+  background-color: #a8a8a8;
+}
+.placeholder {
+  height: 0px;
+  border: 2px dashed #bbb;
+  margin: 5px 0;
+  background: #f0f0f0;
+}
+#sceneList li:hover {
+  background-color: #e4e2e2;
+}
+.dragging {
+  position: fixed; /* or absolute, depending on your layout */
+  pointer-events: none; /* so it doesn't block mouse events */
+  top: 0;
+  left: 0;
+  margin: 0;
+  z-index: 1000; /* on top */
+  /* remove any blur or opacity */
+  filter: none;
+  opacity: 1;
+}
+#autosave{
+  font-size: xx-small;
+}

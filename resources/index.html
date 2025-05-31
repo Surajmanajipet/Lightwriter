@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="/styles.css" />
+  <title>Custom QuillJS Editor with File & Theme</title>
+  <link rel="icon" href="data:,">
+  <link href="libs/dist/quill.snow.css" rel="stylesheet" />
+</head>
+
+<body>
+  <div id="toolbar">
+    <div class="title">
+      <span id="name"></span>
+      <span id="autosave">autosaved at</span>
+    </div>
+    <select class="ql-size">
+      <option value="small">Small</option>
+      <option selected>Normal</option>
+      <option value="large">Large</option>
+      <option value="huge">Huge</option>
+    </select>
+
+    <button class="ql-bold" title="Bold"></button>
+    <button class="ql-italic" title="Italic"></button>
+    <button class="ql-underline" title="Underline"></button>
+
+    <button class="ql-list" value="ordered" title="Ordered List"></button>
+    <button class="ql-list" value="bullet" title="Bullet List"></button>
+
+    <span class="ql-formats">
+      <button class="ql-align" value=""></button>
+      <button class="ql-align" value="center"></button>
+      <button class="ql-align" value="right"></button>
+      <button class="ql-align" value="justify"></button>
+    </span>
+
+    <button id="newBtn" title="New Document">New</button>
+    <button id="openBtn" title="Open File">Open</button>
+    <button id="saveBtn" title="Save File">Save</button>
+    <button id="themeToggle" title="Toggle Dark/Light Theme">Toggle Theme</button>
+    <button id="modeToggle" title="Preview fountain">fountain</button>
+  </div>
+  <div id="container">
+    <button id="listBtn" title="Toggle scene list">&#10005;</button>
+    <aside id="sidebar">
+      <ul id="sceneList"></ul>
+    </aside>
+    <div id="editorContainer">
+      <div id="editor"></div>
+      <div id="preview"></div>
+    </div>
+  </div>
+
+
+  <div class="window-controls">
+    <button id="closeBtn" title="Close">✕</button>
+  </div>
+
+  <!-- QuillJS -->
+  <script src="libs/dist/quill.js"></script>
+
+  <!-- jsPDF UMD -->
+  <script src="libs/jspdf.umd.min.js"></script>
+
+  <!-- PDF font files, must come AFTER jsPDF -->
+  <script src="/js/CourierPrime-Regular-normal.js"></script>
+  <script src="/js/CourierPrime-Bold-bold.js"></script>
+  <script src="/js/CourierPrime-Italic-italic.js"></script>
+  <script src="/js/CourierPrime-BoldItalic-bolditalic.js"></script>
+
+  <!-- Neutralino -->
+  <script src="/js/neutralino.js"></script>
+
+  <!-- Your app's source files -->
+  <script src="/js/main.js"></script>
+
+</body>
+
+</html>
