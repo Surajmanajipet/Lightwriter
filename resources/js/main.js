@@ -1,6 +1,6 @@
 const { jsPDF } = window.jspdf;
 const doc = new jsPDF();
-
+const body = document.body
 const Size = Quill.import('formats/size');
 Size.whitelist = ['small', false, 'large', 'huge'];
 Quill.register(Size, true);
@@ -71,32 +71,30 @@ function updateAutosaveTime() {
 
 window.onload = async () => {
     await Neutralino.init();
+    Neutralino.window.maximize();
     await loadLastOpenedFile();
-    updateAutosaveTime();
-
-    document.getElementById("closeBtn").addEventListener("click", async () => {
-        if (fileHandle) {
+    Neutralino.storage.getData("theme").then(savedTheme => {
+        if (savedTheme === "dark") {
+            body.classList.add("dark-mode");
+            console.log('body is dark');
+        }
+    }).catch(() => {
+        // fallback if no saved theme
+        console.log('No saved theme found');
+    });
+    if (fileHandle) {
+        try {
             await Neutralino.filesystem.writeFile(fileHandle, quill.getText());
             await Neutralino.storage.setData('lastOpenedFile', fileHandle);
+            updateAutosaveTime();
+            console.log('Autosaved at', new Date().toLocaleTimeString());
+        } catch (err) {
+            console.error('Autosave failed:', err);
         }
-        Neutralino.app.exit();
-    });
-
-    // Autosave every 5 minutes
-    setInterval(async () => {
-        if (fileHandle) {
-            try {
-                await Neutralino.filesystem.writeFile(fileHandle, quill.getText());
-                await Neutralino.storage.setData('lastOpenedFile', fileHandle);
-                updateAutosaveTime();
-                console.log('Autosaved at', new Date().toLocaleTimeString());
-            } catch (err) {
-                console.error('Autosave failed:', err);
-            }
-        } else {
-            updateAutosaveTime(); // Hide autosave message
-        }
-    }, 300000); // 5 minutes
+    } else {
+        updateAutosaveTime(); // Hide autosave message
+    }
+    updateAutosaveTime();
 };
 
 // New document
@@ -188,9 +186,18 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 
 
 
-document.getElementById('themeToggle').addEventListener('click', () => {
-    document.body.classList.toggle('dark-mode');
+document.getElementById('themeToggle').addEventListener('click', async () => {
+    const isDark = body.classList.contains("dark-mode");
+
+    if (isDark) {
+        body.classList.remove("dark-mode");
+        await Neutralino.storage.setData("theme", "light");
+    } else {
+        body.classList.add("dark-mode");
+        await Neutralino.storage.setData("theme", "dark");
+    }
 });
+
 
 function onWindowClose() {
     Neutralino.app.exit();
@@ -218,6 +225,7 @@ document.getElementById('modeToggle').addEventListener('click', toggle);
 
 function toggle() {
     const isEditorVisible = editor.style.display !== 'none';
+    const sidebarvisibility = document.getElementById('sidebar').style.visibility
 
     if (isEditorVisible) {
         let text = quill.getText();
@@ -272,11 +280,11 @@ function toggle() {
             } = options;
 
             if (bold) {
-                doc.setFont('CourierPrime-Bold', 'bold');  // your bold font registered as normal style
+                doc.setFont('CourierPrime-Bold', 'bold');
             } else if (italic) {
-                doc.setFont('CourierPrime-Italic', 'italic'); // italic font registered as normal style
+                doc.setFont('CourierPrime-Italic', 'italic');
             } else {
-                doc.setFont('CourierPrime-Regular', 'normal'); // regular font registered as normal style
+                doc.setFont('CourierPrime-Regular', 'normal');
             }
             const wrappedLines = doc.splitTextToSize(text, maxWidth);
 
@@ -319,7 +327,18 @@ function toggle() {
         while (i < lines.length && lines[i].trim() === '') i++;
 
         // Remove metadata lines from the original lines array
-        lines.splice(0, i);
+        const hasMetadata = metadata.length > 0 || contact || email;
+        if (hasMetadata) {
+            lines.splice(0, i);
+        } else {
+            if (!hasMetadata) {
+                doc.setFont('CourierPrime-Bold', 'bold');
+                doc.setFontSize(14);
+                doc.text('Untitled Screenplay', pageWidth / 2, 4, { align: 'center' });
+            }
+            // Reset i to 0 if no metadata was found
+            i = 0;
+        }
 
         // === Insert metadata into the title page ===
         let yTitlePage = 4;
@@ -354,7 +373,7 @@ function toggle() {
         y = margins.top;
         lineCount = 0;
 
-        // Now continue with your existing screenplay rendering loop starting at line 'i' (which you already have)
+        // Now continue with your existing screenplay rendering loop starting at line 'i'
         // -----------------------
         // Screenplay Rendering
         // -----------------------
@@ -405,9 +424,13 @@ function toggle() {
                 // else: treat as character line (fall through)
             }
 
-
-
             if (/^(int|ext|int\/ext|ext\/int)\b/i.test(line)) {
+
+                // Add extra blank line before scene heading if not at the top of the page
+                if (lineCount > 0) {
+                    y += lineHeight * 2;
+                    lineCount += 2;
+                }
                 addWrappedLines(line.toUpperCase(), { bold: true });
                 y += lineHeight;
                 lineCount++;
@@ -431,7 +454,31 @@ function toggle() {
                 continue;
             }
 
+            // ----
+            // Fix applied here:
+            // Group character + parenthetical + dialogue together without page break between
+            // ----
             if (/^[A-Z\s\d()'.\-]+$/.test(line) && !/^(INT|EXT|INT\/EXT|EXT\/INT)/.test(line)) {
+                // Count lines for this block
+                let blockLines = 1;  // character line
+                let nextIndex = i + 1;
+
+                if (nextIndex < lines.length && /^\(.*\)$/.test(lines[nextIndex].trim())) {
+                    blockLines++; // parenthetical
+                    nextIndex++;
+                }
+
+                while (nextIndex < lines.length && lines[nextIndex].trim() !== '') {
+                    blockLines++; // dialogue lines
+                    nextIndex++;
+                }
+
+                // If this block doesn't fit on current page, add page break first
+                if (lineCount + blockLines > maxLinesPerPage) {
+                    addPage();
+                }
+
+                // Render character line
                 addWrappedLines(line.toUpperCase(), {
                     x: margins.characterX,
                     bold: true,
@@ -439,8 +486,8 @@ function toggle() {
                 });
                 i++;
 
+                // Render parenthetical if present
                 if (i < lines.length && /^\(.*\)$/.test(lines[i].trim())) {
-                    if (lineCount + 2 > maxLinesPerPage) addPage();
                     addWrappedLines(lines[i].trim(), {
                         x: margins.parentheticalX,
                         italic: true,
@@ -449,6 +496,7 @@ function toggle() {
                     i++;
                 }
 
+                // Render dialogue lines
                 while (i < lines.length && lines[i].trim() !== '') {
                     addWrappedLines(lines[i].trim(), {
                         x: margins.dialogueX,
@@ -458,8 +506,9 @@ function toggle() {
                 }
 
                 y += lineHeight;
-                lineCount++;
+                lineCount += blockLines;
 
+                // Skip blank lines after dialogue
                 while (i < lines.length && lines[i].trim() === '') i++;
                 continue;
             }
@@ -486,13 +535,19 @@ function toggle() {
 
         editor.style.display = "none";
         document.getElementById('sidebar').style.display = "none";
+        document.getElementById('sidebar2').style.display = "none";
+        document.getElementById('listBtn').style.display = "none";
         previewDiv.style.display = "block";
     } else {
         editor.style.display = "block";
-        document.getElementById('sidebar').style.display = "block";
+        document.getElementById('sidebar').style.display = "";
+        document.getElementById('sidebar2').style.display = "";
+        document.getElementById('listBtn').style.display = "";
+        document.getElementById('listBtn').style.display = ""; // Ensure button icon matches state
         previewDiv.style.display = "none";
     }
 }
+
 document.addEventListener('keydown', async function (event) {
     if (event.ctrlKey && !event.shiftKey) {
         switch (event.key.toLowerCase()) {
@@ -581,13 +636,13 @@ document.addEventListener('keydown', async function (event) {
         }
     }
 });
+
 const sceneList = document.getElementById('sceneList');
-
-// Assuming you already have a Quill editor instance initialized as `quill`
 let script = {};
+let originalScript = {};
 
-let typingTimer;
-
+let fullScriptText = ''; // stores original full script
+document.getElementById('listBtn').style.setProperty('visibility', 'hidden', 'important');
 quill.on('text-change', (delta, oldDelta, source) => {
     if (source !== 'user') return;
 
@@ -602,43 +657,75 @@ quill.on('text-change', (delta, oldDelta, source) => {
     let currentScene = null;
     let charIndex = 0;
 
-    // === Detect Metadata (stop if blank line or scene heading) ===
     let metadataLines = [];
     while (i < lines.length) {
         const trimmed = lines[i].trim();
         const isSceneHeading = /^(INT\.|EXT\.|INT\/EXT\.|EXT\/INT\.)/i.test(trimmed);
-
         if (trimmed === '' || isSceneHeading) break;
 
         metadataLines.push(lines[i]);
         charIndex += lines[i].length + 1;
         i++;
     }
+
     if (metadataLines.length > 0) {
         script.metadata = metadataLines.join('\n');
         if (lines[i] === '') {
-            charIndex += 1; // for the blank line
-            i++; // Skip blank line after metadata
+            charIndex += 1;
+            i++;
         }
     }
 
-    // === Parse Scenes ===
+    const characterSet = new Set();
+    const locationSet = new Set();
+
     for (; i < lines.length; i++) {
         const line = lines[i];
         const trimmed = line.trim();
         const isSceneHeading = /^(INT\.|EXT\.|INT\/EXT\.|EXT\/INT\.)/i.test(trimmed);
 
         if (isSceneHeading) {
-            currentScene = { heading: trimmed, content: [trimmed] };
+            if (trimmed === '') continue; // skip empty headings
+
+            // Extract location part from scene heading
+            // Match: INT./EXT. + space + (capture location) + optional space + - + anything
+            // Example: "INT. Location 1 - DAY" => captures "Location 1"
+            const locationMatch = trimmed.match(/^(INT\.|EXT\.|INT\/EXT\.|EXT\/INT\.)\s+(.+?)\s*(?:-.*)?$/i);
+            let locationName = trimmed;
+            if (locationMatch) {
+                locationName = locationMatch[2].trim(); // The captured location part
+            }
+
+            locationSet.add(locationName);
+
+            currentScene = { heading: trimmed, content: [trimmed], characters: new Set(), location: locationName };
             script[sceneIndex] = currentScene;
-
-            // Bold the scene heading in editor
             quill.formatText(charIndex, line.length, { bold: true }, 'silent');
+            sceneIndex++;
+        } else if (currentScene) {
+            currentScene.content.push(line);
 
-            // Add scene heading to sidebar
+            if (
+                /^[A-Z0-9 ()'.\-]+$/.test(trimmed) &&
+                trimmed.length > 0 &&
+                trimmed.length <= 30 &&
+                !trimmed.endsWith(':') &&
+                !isSceneHeading
+            ) {
+                characterSet.add(trimmed);
+                currentScene.characters.add(trimmed);
+            }
+        }
+
+        charIndex += line.length + 1;
+    }
+
+    function renderSceneList(scenes) {
+        sceneList.innerHTML = '';
+        scenes.forEach((scene, idx) => {
             const li = document.createElement('li');
-            li.textContent = trimmed;
-            li.dataset.index = sceneIndex;
+            li.textContent = scene.heading;
+            li.dataset.index = idx;
             li.draggable = true;
             li.style.cursor = 'pointer';
 
@@ -646,58 +733,169 @@ quill.on('text-change', (delta, oldDelta, source) => {
                 const allLines = quill.getText().split('\n');
                 let charIdx = 0;
                 for (let j = 0; j < allLines.length; j++) {
-                    if (allLines[j].trim() === trimmed) break;
+                    if (allLines[j].trim() === scene.heading) break;
                     charIdx += allLines[j].length + 1;
                 }
 
                 quill.setSelection(charIdx, 0, 'silent');
-
                 const [blot] = quill.getLine(charIdx);
-                if (blot && blot.domNode && blot.domNode.scrollIntoView) {
-                    blot.domNode.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                if (blot?.domNode?.scrollIntoView) {
+                    blot.domNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             });
 
             sceneList.appendChild(li);
-            sceneIndex++;
-        } else if (currentScene) {
-            currentScene.content.push(line);
-        }
-
-        charIndex += line.length + 1; // account for newline
+        });
     }
 
-    // Only add the Jump to End button if there is at least one scene
+    // Filter out 'metadata' from scenes before rendering
+    const scenesToRender = Object.entries(script)
+        .filter(([key]) => key !== 'metadata')
+        .map(([, scene]) => scene);
+
+    renderSceneList(scenesToRender);
+    if (sceneIndex > 0) {
+        document.getElementById('sidebar2').style.visibility = 'visible';
+        document.getElementById('listBtn').style.visibility = 'visible';
+    } else {
+        document.getElementById('sidebar2').style.visibility = 'hidden';
+        document.getElementById('listBtn').style.visibility = 'hidden';
+    }
+
+    // Store original full script text
+    fullScriptText = script.metadata
+        ? script.metadata + '\n\n' + scenesToRender.map(s => s.content.join('\n')).join('\n\n')
+        : scenesToRender.map(s => s.content.join('\n')).join('\n\n');
+
+    // Add jump to end button
+    const jumpBtnContainer = document.getElementById('jumpBtnContainer');
+    jumpBtnContainer.innerHTML = '';
     if (sceneIndex > 0) {
         const jumpBtn = document.createElement('button');
         jumpBtn.textContent = '➕ Jump to End';
-        jumpBtn.style.marginTop = '10px';
-        jumpBtn.style.padding = '5px 10px';
-        jumpBtn.style.cursor = 'pointer';
-        jumpBtn.style.width = '100%';
-        jumpBtn.style.border = 'none';
-        jumpBtn.style.background = '#f0f0f0';
-        jumpBtn.style.fontWeight = 'bold';
+        Object.assign(jumpBtn.style, {
+            marginTop: '10px',
+            padding: '5px 10px',
+            cursor: 'pointer',
+            width: '100%',
+            border: 'none',
+            background: '#f0f0f0',
+            fontWeight: 'bold',
+        });
 
+        jumpBtn.draggable = false;
+        jumpBtn.addEventListener('dragstart', (e) => e.preventDefault());
         jumpBtn.addEventListener('click', () => {
-            const endIndex = quill.getLength() - 1; // Last character index
-
+            const endIndex = quill.getLength() - 1;
             quill.setSelection(endIndex, 0, 'silent');
-
             const [blot] = quill.getLine(endIndex);
-            if (blot && blot.domNode && blot.domNode.scrollIntoView) {
-                blot.domNode.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'end'
+            blot?.domNode?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        });
+
+        jumpBtnContainer.appendChild(jumpBtn);
+    }
+
+    // === Sidebar2 filters ===
+    const sidebar2 = document.getElementById('sidebar2');
+    sidebar2.innerHTML = '';
+
+    const charsDiv = document.createElement('div');
+    Object.assign(charsDiv.style, {
+        height: '50%',
+        overflowY: 'auto',
+        borderBottom: '1px solid #ccc',
+        padding: '5px',
+    });
+
+    const locsDiv = document.createElement('div');
+    Object.assign(locsDiv.style, {
+        height: '50%',
+        overflowY: 'auto',
+        padding: '5px',
+    });
+
+    const charsTitle = document.createElement('h3');
+    charsTitle.textContent = 'Characters';
+    charsDiv.appendChild(charsTitle);
+
+    const locsTitle = document.createElement('h3');
+    locsTitle.textContent = 'Locations';
+    locsDiv.appendChild(locsTitle);
+
+    function createCheckbox(name, type) {
+        const label = document.createElement('label');
+        label.style.display = 'block';
+        label.style.cursor = 'pointer';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = name;
+        checkbox.dataset.type = type;
+        checkbox.style.marginRight = '6px';
+
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(name));
+        return label;
+    }
+
+    characterSet.forEach(c => charsDiv.appendChild(createCheckbox(c, 'character')));
+    locationSet.forEach(l => locsDiv.appendChild(createCheckbox(l, 'location')));
+
+    sidebar2.appendChild(charsDiv);
+    sidebar2.appendChild(locsDiv);
+
+    // === Filtering logic ===
+    const checkboxes = sidebar2.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+            const checkedChars = new Set();
+            const checkedLocs = new Set();
+
+            checkboxes.forEach(box => {
+                if (box.checked) {
+                    if (box.dataset.type === 'character') checkedChars.add(box.value);
+                    if (box.dataset.type === 'location') checkedLocs.add(box.value);
+                }
+            });
+
+            const anyChecked = checkedChars.size > 0 || checkedLocs.size > 0;
+
+            // Always filter scenes excluding metadata
+            let filteredScenes = Object.entries(script)
+                .filter(([key]) => key !== 'metadata')
+                .map(([, scene]) => scene);
+
+            if (anyChecked) {
+                filteredScenes = filteredScenes.filter(scene => {
+                    const locMatch = checkedLocs.size === 0 || checkedLocs.has(scene.location);
+                    const charMatch = checkedChars.size === 0 || [...checkedChars].some(c => scene.characters?.has(c));
+                    return locMatch && charMatch;
                 });
             }
+
+            renderSceneList(filteredScenes);
+
+            const displayText = !anyChecked
+                ? fullScriptText
+                : (script.metadata ? script.metadata + '\n\n' : '') +
+                filteredScenes.map(s => s.content.join('\n')).join('\n\n');
+
+            quill.setText(displayText.trim(), 'silent');
+
+            // Reapply bold to scene headings
+            let charIndex = 0;
+            const textLines = quill.getText().split('\n');
+            for (let line of textLines) {
+                if (/^(INT\.|EXT\.|INT\/EXT\.|EXT\/INT\.)/i.test(line.trim())) {
+                    quill.formatText(charIndex, line.length, { bold: true }, 'silent');
+                }
+                charIndex += line.length + 1;
+            }
         });
-        sceneList.appendChild(jumpBtn);
-    }
+    });
 });
+
+
 
 
 function parseScenes() {
@@ -805,18 +1003,26 @@ document.getElementById('listBtn').addEventListener('click', toggleSceneList);
 
 function toggleSceneList() {
     const sceneList = document.getElementById('sceneList');
+    const sidebar2 = document.getElementById('sidebar2');
+    const jumpBtn = document.getElementById('jumpBtnContainer');
     const listBtn = document.getElementById('listBtn');
 
-    if (listVisible) {
-        sceneList.style.display = "none";
+    // Toggle visibility state
+    const isVisible = sceneList.style.visibility !== "hidden";
+
+    if (isVisible) {
+        sceneList.style.visibility = "hidden";
+        sidebar2.style.visibility = "hidden";
+        jumpBtn.style.visibility = "hidden";
         listBtn.innerHTML = '&#9776;'; // Menu icon
     } else {
-        sceneList.style.display = "block";
+        sceneList.style.visibility = "visible";
+        sidebar2.style.visibility = "visible";
+        jumpBtn.style.visibility = "visible";
         listBtn.innerHTML = '&#10005;'; // Close (×) icon
     }
-
-    listVisible = !listVisible;
 }
+
 
 let draggingItem = null;
 const placeholder = document.createElement('li');
@@ -858,6 +1064,11 @@ sceneList.addEventListener('dragstart', (e) => {
     customDragImage.style.zIndex = '1000';
     customDragImage.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
     customDragImage.style.backgroundColor = 'white';
+    customDragImage.style.borderRadius = '8px'
+    customDragImage.style.fontFamily = "'consolas'";
+    customDragImage.style.display = "flex";
+    customDragImage.style.justifyContent = "center";
+    customDragImage.style.alignItems = "center"
     document.body.appendChild(customDragImage);
 
     // Insert placeholder immediately after dragging item

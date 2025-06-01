@@ -778,21 +778,21 @@ type Builtin = "ready" | "trayMenuItemClicked" | "windowClose" | "serverOffline"
 }
 
 // debug
-enum LoggerType {
+export enum LoggerType {
     WARNING = 'WARNING',
     ERROR = 'ERROR',
     INFO = 'INFO'
   }
 
 // os
-enum Icon {
+export enum Icon {
     WARNING = 'WARNING',
     ERROR = 'ERROR',
     INFO = 'INFO',
     QUESTION = 'QUESTION'
 }
 
-enum MessageBoxChoice {
+export enum MessageBoxChoice {
     OK = 'OK',
     OK_CANCEL = 'OK_CANCEL',
     YES_NO = 'YES_NO',
@@ -802,21 +802,21 @@ enum MessageBoxChoice {
 }
 
 //clipboard
-enum ClipboardFormat {
+export enum ClipboardFormat {
     unknown = 'unknown',
     text = 'text',
     image = 'image'
 }
 
 // NL_GLOBALS
-enum Mode {
+export enum Mode {
     window = 'window',
     browser = 'browser',
     cloud = 'cloud',
     chrome = 'chrome'
 }
 
-enum OperatingSystem {
+export enum OperatingSystem {
     Linux = 'Linux',
     Windows = 'Windows',
     Darwin = 'Darwin',
@@ -824,7 +824,7 @@ enum OperatingSystem {
     Unknown = 'Unknown'
 }
 
-enum Architecture {
+export enum Architecture {
     x64 = 'x64',
     arm = 'arm',
     itanium = 'itanium',

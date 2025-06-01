@@ -40,17 +40,29 @@
     <button id="openBtn" title="Open File">Open</button>
     <button id="saveBtn" title="Save File">Save</button>
     <button id="themeToggle" title="Toggle Dark/Light Theme">Toggle Theme</button>
-    <button id="modeToggle" title="Preview fountain">fountain</button>
+    <button id="modeToggle" title="Preview fountain">Preview</button>
   </div>
   <div id="container">
     <button id="listBtn" title="Toggle scene list">&#10005;</button>
     <aside id="sidebar">
       <ul id="sceneList"></ul>
+      <div id="jumpBtnContainer"></div>
     </aside>
     <div id="editorContainer">
-      <div id="editor"></div>
+      <div id="editor" spellcheck="false"></div>
       <div id="preview"></div>
     </div>
+    <aside id="sidebar2">
+      <div id="characterListContainer">
+        <h3>Characters</h3>
+        <ul id="characterList"></ul>
+      </div>
+      <div id="locationListContainer">
+        <h3>Locations</h3>
+        <ul id="locationList"></ul>
+      </div>
+    </aside>
+
   </div>
 
 

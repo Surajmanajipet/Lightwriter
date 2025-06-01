@@ -41,15 +41,15 @@
       "minHeight": 200,
       "center": true,
       "transparent": false,
-      "fullScreen": true,
+      "fullScreen": false,
       "alwaysOnTop": false,
       "icon": "/resources/icons/appIcon.png",
       "enableInspector": false,
       "borderless": false,
-      "frameless" : true,
+      "frameless" : false,
       "maximize": true,
       "hidden": false,
-      "resizable": true,
+      "resizable": false,
       "exitProcessOnClose": true
       
     },
